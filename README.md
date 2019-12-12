@@ -17,7 +17,6 @@ Onehot function was utilized to take the labels that were taken from the mnist d
  
 Here is where the Adam algorithm was set as the gradient that was calculated earlier is used to determine the weights iteratively. 
  
-	This is where the multiclass error count check was done as it was based off the given test function. The class that was predicted is compared to the actual class and if it’s incorrect then the errorCount is incremented. 
 Reproducibility
 To implement this in Julia, you’ll need to have the HDF5, Distributions, Linear Algebra, and Random function implemented. The hyperparameters will have to be experimented on but ideally as long as they aren’t that farfetched it should still converge. The Adam algorithm formula with its parameters will have to be set and those include the eps, beta1, and beta2. The beta1 and beta2 will be needed as decay rates for momentum and the eps is a numerical stability parameter to avoid divide by 0 issue. 
 Results 
