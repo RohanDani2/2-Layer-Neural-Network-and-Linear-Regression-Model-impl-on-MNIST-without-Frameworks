@@ -37,7 +37,8 @@ For the 2 layer network this is the softmax and softmax derivative function appl
  
 Here the two gradients are being calculated and I was able to reduce the number of for loops through the use of dot products which speeds up the algorithm drastically. The back propagation is done by multiplying the weight value by the delta and adding it to the gradient vector. 
  
-Here the Adam algorithm is computed as the gradients are divided by the batch size as well and all the scalars were dot multiplied to the matrices to make sure that the right value was being calculated. 
+The Adam algorithm is computed as the gradients are divided by the batch size as well and all the scalars were dot multiplied to the matrices to make sure that the right value was being calculated. 
+
 Reproducibility
 To reproduce this 2 layer network the packages I used were Plots, Images, Distributions, Linear Algebra, HDF5, Random, Special Functions, and StatsPlots. To reproduce what I had implemented there will be a lot of changing of hyperparameters and reducing the number of loops used as you can see the difference from the commented code to the one not.  
  
