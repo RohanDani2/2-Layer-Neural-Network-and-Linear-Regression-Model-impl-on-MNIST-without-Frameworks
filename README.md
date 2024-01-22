@@ -43,10 +43,5 @@ To reproduce this 2 layer network the packages I used were Plots, Images, Distri
  
 Results 
 	This result I received was 7.58% testing error which is good as the benchmark is roughly around 7.6%. The time taken for computing was about 1 hour and 13 minutes which is a long time but it did reduce the error by a lot from the 1 layer. 
-References 
-http://vision.stanford.edu/cs598_spring07/papers/Lecun98.pdf
-https://towardsdatascience.com/adam-latest-trends-in-deep-learning-optimization-6be9a291375c#:~:targetText=Adam%20%5B1%5D%20is%20an%20adaptive,for%20training%20deep%20neural%20networks.&targetText=The%20algorithms%20leverages%20the%20power,learning%20rates%20for%20each%20parameter.
-http://cs231n.github.io/neural-networks-3/?fbclid=IwAR35GY8AFPVyudC_Ypf7TNPBq7Ie7MyrVTU5384YGKNQhYexKeBEgmTjoLI
-https://medium.com/aidevnepal/for-sigmoid-funcion-f7a5da78fec2
-https://towardsdatascience.com/activation-functions-neural-networks-1cbd9f8d91d6
+
 
