@@ -56,7 +56,10 @@ function test(w1, w2, input, target, idx)
 end
 
 function train(input, target)
+    #avoid divide by zero
     eps = 10^(-8)
+
+    #decay parameters 
     beta1 = 0.9
     beta2 = 0.999
     alpha = 0.0019
@@ -164,13 +167,21 @@ function train(input, target)
     	end
 
 
-        # update weights using Adam
+        # update weights using Adam EWMA
+
+        #gradients calculated during backprop
         grad2 = grad2 / B
         grad1 = grad1 / B
+
+        #momentum, using leaky average this gives bias to recent graidents, adding inertia
         m1 = beta1 .* m1 .+ (1 - beta1) .* grad1
         mt1 = m1 ./ (1 - (beta1 ^ index))
+
+        #exponential weighted moving average of squared gradient, square gives velocity
         v1 = beta2 .* v1 .+ (1 - beta2) .* (grad1 .^ 2)
         vt1 = v1 ./ (1 - beta2 ^ index)
+
+        #weight_update = learning_rate * m / (sqrt(v) + epsilon)
         w1 += -alpha .* mt1 ./ (sqrt.(vt1) .+ eps)
 
         m2 = beta1 .* m2 .+ (1 - beta1) .* grad2
@@ -194,9 +205,6 @@ function train(input, target)
 	end
     error = test(w1, w2, input, target, trainidx)/Ntrain
     println("Final Train Error = $(error)")
-
-    error = test(w1, w2, input, target, testidx)/Ntrain
-    println("Final Test Error = $(error)")
 
     return w1, w2, error
 end
