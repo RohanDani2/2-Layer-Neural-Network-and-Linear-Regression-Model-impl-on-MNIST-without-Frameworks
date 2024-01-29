@@ -106,7 +106,7 @@ function train(input, target)
         #updating weights 
         weight1 += -alpha .* mt1 ./ (sqrt.(vt1) .+ eps)
 
-        errorrate = test(weight1, input, target, testidx)/Ntrain
+        errorrate = test(weight1, input, target, trainidx)/Ntrain
         push!(error, errorrate)
 
         println("Training Error = $(errorrate)")
@@ -118,10 +118,6 @@ function train(input, target)
     end
     error = test(weight1, input, target, trainidx)/Ntrain
     println("Final Testing Error = $(error)")
-
-    error = test(weight1, input, target, testidx)/Ntrain
-    global errorrate
-    println("Final Test Error = $(errorrate)")
 
     return weight1, error
 end
