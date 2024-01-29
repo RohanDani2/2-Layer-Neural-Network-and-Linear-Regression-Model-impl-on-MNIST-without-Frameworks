@@ -1,26 +1,24 @@
+import Pkg
 using Plots, Images, Distributions, LinearAlgebra, SpecialFunctions
 using HDF5, Random
 using StatsPlots
 import Base: error
 
-# linear activation function
+# linear activation function for the output layer
 hlin(a) = a
 # and it's derivative
 hplin(a) = 1
 
-hsig(a) = 1 ./ (1 .+ exp.(-a))
-hpsig(a) = hsig(a) .* (1 .- hsig.(a))
-
+#output layer of the multiclassification 
 softmax(x) = exp.(x) ./ sum(exp.(x))
+
+#compute the gradient during backprop
 softmaxderiv(x) = softmax(x) .* (Diagonal(ones(10,10)) .- softmax.(x))'
 
 # activation function for output layer
 hout = softmax
+#derivative of the softmax as the derivative function for output layer
 hpout = softmaxderiv
-
-# activation function for hidden layer
-hhid = hsig
-hphid = hpsig
 
 function test(weight1, input, target, idx)
     N = length(idx)
@@ -43,8 +41,11 @@ end
 
 function train(input, target)
     eps = 10^(-8)
+
+    #exponential decay rate, moving average incorporates last 10 gradients
     beta1 = 0.9
     beta2 = 0.999
+    #learning rate
     alpha = 0.00002
     B = 500
     count = 0
@@ -67,18 +68,22 @@ function train(input, target)
     # layer 1 weights
     weight1 = 0.0007*randn(10,D)
     bestweight1 = weight1
+    #creates a uniform probability that any sample can be used
     pdf = Uniform(1, Ntrain)
-    error = []
+    error = [] 
     index = 1
 
+    #setting initial arrays for the adam algorithm 
     m1 = zeros(10,D)
     v1 = zeros(10,D)
 
     while count < 3000
         grad1 = zeros(10,D)
-        for n = 1:B
-            sample = trainidx[round(Int64, rand(pdf, 1)[1])]
+        for n = 1:B #taking a batch of 500 values
+            sample = trainidx[round(Int64, rand(pdf, 1)[1])] #chooses a training sample from uniform distribution
+            #x is the pixel values of the digits
             x = input[sample]
+            #one hot encoded labels
             t = target[sample]
 
             inputnode = x
@@ -90,18 +95,22 @@ function train(input, target)
             grad1 = (hpout(outputnode) * delta * x')
         end
         grad1 = grad1 / B
-
+        
+        #moving average of the adam
         m1 = beta1 .* m1 .+ (1 - beta1) .* grad1
+        #uses this line to counteract the first moments toward zero
         mt1 = m1 ./ (1 - (beta1 ^ index))
         v1 = beta2 .* v1 .+ (1 - beta2) .* (grad1 .^ 2)
+        #counteract the second moments toward zero, divide by the expected value factor
         vt1 = v1 ./ (1 - (beta2 ^ index))
+        #updating weights 
         weight1 += -alpha .* mt1 ./ (sqrt.(vt1) .+ eps)
 
         errorrate = test(weight1, input, target, testidx)/Ntrain
         push!(error, errorrate)
 
         println("Training Error = $(errorrate)")
-        if (errorrate <= 0.12)
+        if (errorrate <= 0.12) #if error rate hits 0.12 then I stop it
             break
         end
         index = index + 1
@@ -120,8 +129,10 @@ end
 
 function output()
     h5open("mnist.h5", "r") do file
-        labels = read(file, "test/labels")
-        images = read(file, "test/images")
+
+        #read in train mnist labels and images
+        labels = read(file, "train/labels")
+        images = read(file, "train/images")
 
         input = []
         target = []

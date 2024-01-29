@@ -1,21 +1,30 @@
 using HDF5, Distributions, LinearAlgebra, Random
 
-# linear activation function
+# linear activation function for the output layer
 hlin(a) = a
-hplin(a) = 1
 # and it's derivative
+hplin(a) = 1
+
+#sigmoid activation function to map the value between 0 and 1
 hsig(a) = 1 ./ (1 .+ exp.(-a))
+
+# used in backprop for calculating the gradients
 hpsig(a) = hsig(a) .* (1 .- hsig.(a))
 
+#output layer of the multiclassification 
 softmax(x) = exp.(x) ./ sum(exp.(x))
-softmaxDerivative(x) = softmax(x) .* (Diagonal(ones(10,10)) .- softmax.(x))'
+
+#compute the gradient during backprop
+softmaxderiv(x) = softmax(x) .* (Diagonal(ones(10,10)) .- softmax.(x))'
 
 # activation function for output layer
 hout = softmax
-hpout = softmaxDerivative
+#derivative of the softmax as the derivative function for output layer
+hpout = softmaxderiv
 
-# activation function for hidden layer
+# sigmoid activation function for hidden layer
 hhid = hsig
+#derivative of sigmoid as the derivative function for the hidden layer
 hphid = hpsig
 
 function test(w1, w2, input, target, idx)
