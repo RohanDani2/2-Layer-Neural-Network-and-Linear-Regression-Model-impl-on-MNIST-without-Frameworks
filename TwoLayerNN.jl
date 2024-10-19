@@ -156,7 +156,8 @@ function train(input, target)
             #     end
             # end
             # compute layer 2 gradients by backpropagation of delta
-
+            
+            #calculate gradient for bias node
             grad2[:,1] = delta * y[1]
             grad2[:,2:end] = hpout(z) * delta * (y[2:end])'
 
