@@ -1,3 +1,4 @@
+
 using HDF5, Distributions, LinearAlgebra, Random
 
 # linear activation function for the output layer
@@ -27,187 +28,154 @@ hhid = hsig
 #derivative of sigmoid as the derivative function for the hidden layer
 hphid = hpsig
 
+function cross_entropy_loss(z, t)
+    return -sum(t .* log.(z .+ 1e-9))  # Add epsilon to avoid log(0)
+end
+
+function compute_accuracy(w1, w2, input, target, idx)
+    correct = 0
+    for n in idx
+        x = input[n]
+        t = target[n]
+
+        # Forward propagation
+        hiddennode = hhid(w1 * x)
+        y = [1.0; hiddennode]
+        z = hout(w2 * y)
+
+        predicted_label = argmax(z) - 1
+        true_label = argmax(t) - 1
+
+        if predicted_label == true_label
+            correct += 1
+        end
+    end
+    return correct / length(idx)
+end
+
 function test(w1, w2, input, target, idx)
-
     N = length(idx)
-    D = length(input[1])
-    M = size(w1)[1]
-
-    error = 0
+    error = 0.0
 
     for n = 1:N
         x = input[idx[n]]
         t = target[idx[n]]
 
-        # forward propagate
-        y = zeros(M+1)
+        # Forward propagate
+        y = [1.0; hhid(w1 * x)]  # Including bias node
+        z = hout(w2 * y)
 
-        y[1] = 1 # bias node
-        a = w1 * x
-        y[2:end] = hhid(a)
-        a = 0
-        a = w2 * y
-        z = hout(a)
-
-        errors = sum(((z .- t).^2))
-        error += errors
+        error += cross_entropy_loss(z, t)
     end
     return error
 end
 
 function train(input, target)
-    #avoid divide by zero
-    eps = 10^(-8)
+    # Avoid divide by zero
+    eps = 1e-8
 
-    #decay parameters 
+    # Decay parameters
     beta1 = 0.9
     beta2 = 0.999
     alpha = 0.0019
 
-    # number of samples
+    # Number of samples
     N = length(target)
-    # dimension of input
+    # Dimension of input
     D = length(input[1])
 
-    # number to hold out
-    Nhold = round(Int64, N/10)
+    # Number to hold out
+    Nhold = round(Int64, N / 10)
 
-    # number in training set
+    # Number in training set
     Ntrain = N - Nhold
 
-    # create indices
+    # Create indices
     idx = shuffle(1:N)
     trainidx = idx[1:Ntrain]
-    testidx = idx[(Ntrain+1):N]
-    #print(size(trainidx))
+    testidx = idx[(Ntrain + 1):N]
 
-    #println("$(length(trainidx)) training samples")
-    #println("$(length(testidx)) validation samples")
-
-    # number of hidden nodes
+    # Number of hidden nodes
     M = 256
 
-    # batch size
+    # Batch size
     B = 256
 
-    # input layer activation
-    inputnode = zeros(D)
+    # Initialize weights
+    w1 = 0.0007 * rand(M, D)
+    w2 = 0.0007 * rand(10, M + 1)
 
-    # hidden layer activation
-    hiddennode = zeros(M)
-
-    # output node activation
-    outputnode = zeros(10)
-
-    # layer 1 weights
-    w1 = .0007*rand(M, D)
-    bestw1 = w1
-
-    # layer 2 weights (inc bias)
-    w2 = .0007*rand(10,M+1)
-    bestw2 = w2
-
-    pdf = Uniform(1,Ntrain)
-    error = []
-
-	#initialize the values of the parameters for Adam
-
-	m1 = zeros(M, D)
-	m2 = zeros(10,M+1)
-	v1 = zeros(M, D)
-	v2 = zeros(10,M+1)
+    # Initialize Adam optimizer variables
+    m1 = zeros(M, D)
+    m2 = zeros(10, M + 1)
+    v1 = zeros(M, D)
+    v2 = zeros(10, M + 1)
 
     index = 1
-    count = 1
-    while count < 3000
+    max_epochs = 30  # Or your desired number of epochs
 
-        grad1 = zeros(M, D)
-        grad2 = zeros(10,M+1)
+    for epoch = 1:max_epochs
+        shuffle!(trainidx)
 
-        for n = 1:B
-            sample = trainidx[round(Int64, rand(pdf, 1)[1])]
+        for i in 1:B:Ntrain
+            batch_indices = trainidx[i:min(i + B - 1, Ntrain)]
+            grad1 = zeros(M, D)
+            grad2 = zeros(10, M + 1)
 
-            #sample = rand(Ntrain, B)
-            x = input[sample]
-            t = target[sample]
-            # forward propagate
-            inputnode = x
-            y = zeros(M+1)
+            for n in batch_indices
+                x = input[n]
+                t = target[n]
 
-            y[1] = 1 # bias node
-            hiddennode = w1*inputnode
-            #print(hiddennode)
-            y[2:end] = hhid(hiddennode)
+                # Forward propagation
+                hiddennode = w1 * x
+                y = [1.0; hhid(hiddennode)]
+                outputnode = w2 * y
+                z = hout(outputnode)
 
-            # for j = 1:M+1
-            #     outputnode += w2[:,j]*y[j]
-            # end
-            outputnode = w2*y
-            z = hout(outputnode)
-            # end forward propagate
+                # Compute gradients
+                delta = z .- t  # Output layer error
+                grad2 += delta * y'
 
-            # output error
-            delta = z .- t
-            # for j = 1:M+1
-            #     if j == 1 # bias node
-            #         grad2[1,j] += delta*y[j]
-            #     else
-            #         grad2[1,j] += delta*y[j]*hpout(outputnode)
-            #     end
-            # end
-            # compute layer 2 gradients by backpropagation of delta
-            
-            #calculate gradient for bias node
-            grad2[:,1] = delta * y[1]
-            grad2[:,2:end] = hpout(z) * delta * (y[2:end])'
-
-            # compute layer 1 gradients by backpropagation of deltaj
-            for j = 1:M
-                grad1[j,:] += delta'*w2[:,j+1]*hphid(hiddennode[j])*x[:]
+                delta_hidden = (w2[:, 2:end]' * delta) .* hphid(hiddennode)
+                grad1 += delta_hidden * x'
             end
-    	end
 
+            # Average gradients over batch size
+            grad1 /= length(batch_indices)
+            grad2 /= length(batch_indices)
 
-        # update weights using Adam EWMA
+            # Update weights using Adam optimizer
+            m1 = beta1 .* m1 .+ (1 - beta1) .* grad1
+            v1 = beta2 .* v1 .+ (1 - beta2) .* (grad1 .^ 2)
+            mt1 = m1 ./ (1 - beta1 ^ index)
+            vt1 = v1 ./ (1 - beta2 ^ index)
+            w1 -= alpha .* mt1 ./ (sqrt.(vt1) .+ eps)
 
-        #gradients calculated during backprop
-        grad2 = grad2 / B
-        grad1 = grad1 / B
+            m2 = beta1 .* m2 .+ (1 - beta1) .* grad2
+            v2 = beta2 .* v2 .+ (1 - beta2) .* (grad2 .^ 2)
+            mt2 = m2 ./ (1 - beta1 ^ index)
+            vt2 = v2 ./ (1 - beta2 ^ index)
+            w2 -= alpha .* mt2 ./ (sqrt.(vt2) .+ eps)
 
-        #momentum, using leaky average this gives bias to recent graidents, adding inertia
-        m1 = beta1 .* m1 .+ (1 - beta1) .* grad1
-        mt1 = m1 ./ (1 - (beta1 ^ index))
+        index += 1
+    end
 
-        #exponential weighted moving average of squared gradient, square gives velocity
-        v1 = beta2 .* v1 .+ (1 - beta2) .* (grad1 .^ 2)
-        vt1 = v1 ./ (1 - beta2 ^ index)
+    # Evaluate training and validation loss and accuracy
+    train_loss = test(w1, w2, input, target, trainidx) / Ntrain
+    val_loss = test(w1, w2, input, target, testidx) / (N - Ntrain)
+    train_acc = compute_accuracy(w1, w2, input, target, trainidx)
+    val_acc = compute_accuracy(w1, w2, input, target, testidx)
 
-        #weight_update = learning_rate * m / (sqrt(v) + epsilon)
-        w1 += -alpha .* mt1 ./ (sqrt.(vt1) .+ eps)
+    # Print metrics for each epoch
+    println("Epoch $(epoch): Training Loss = $(train_loss), Validation Loss = $(val_loss)")
+    println("Epoch $(epoch): Training Accuracy = $(train_acc), Validation Accuracy = $(val_acc)")
+end
 
-        m2 = beta1 .* m2 .+ (1 - beta1) .* grad2
-        mt2 = m2 ./ (1 - (beta1 ^ index))
-        v2 = beta2 .* v2 .+ (1 - beta2) .* (grad2 .^ 2)
-        vt2 = v2 ./ (1 - beta2 ^ index)
-        w2 += -alpha .* mt2 ./ (sqrt.(vt2) .+ eps)
-        #println("weight 1 norm")
-        #print(norm(w1))
-        #println("weight 2 norm")
-        #print(norm(w2))
+# Final evaluation
+final_loss = test(w1, w2, input, target, trainidx) / Ntrain
+println("Final Training Loss = $(final_loss)")
 
-        errorrate = test(w1, w2, input, target, trainidx)/Ntrain
-        push!(error, errorrate)
-        println("Training Error = $(errorrate)")
-        if (errorrate <= 0.15)
-            break
-        end
-        index = index + 1
-        count = count + 1
-	end
-    error = test(w1, w2, input, target, trainidx)/Ntrain
-    println("Final Train Error = $(error)")
-
-    return w1, w2, error
+return w1, w2, final_loss
 end
 
 function onehot(x)
@@ -227,10 +195,10 @@ function output()
         N_size = size(labels)[1]
 
         for i = 1:N_size
-            img = reshape(images[:,:,i], 784) #reshape data to 60000 by 784
-            onehot_label = onehot(labels[i]) #onehot encode label
+            img = reshape(images[:, :, i], 784) / 255.0  # Normalize pixel values
+            onehot_label = onehot(labels[i])
             push!(target, onehot_label)
-            prepend!(img, 1)
+            img = [1.0; img]  # Add bias term
             push!(input, img)
         end
         weight1, weight2, error = train(input, target)
